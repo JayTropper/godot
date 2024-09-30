@@ -3192,15 +3192,15 @@ Error Main::setup2(bool p_show_boot_logo) {
 			bool agile_input_event_flushing = GLOBAL_DEF("input_devices/buffering/agile_event_flushing", false);
 			id->set_agile_input_event_flushing(agile_input_event_flushing);
 
-			//if (bool(GLOBAL_DEF_BASIC("input_devices/pointing/emulate_touch_from_mouse", false)) &&
-			//		!(editor || project_manager)) {
-			//	if (!DisplayServer::get_singleton()->is_touchscreen_available()) {
-			//		//only if no touchscreen ui hint, set emulation
-			//		id->set_emulate_touch_from_mouse(true);
-			//	}
-			//}
+			if (bool(GLOBAL_DEF_BASIC("input_devices/pointing/emulate_touch_from_mouse", false)) &&
+					!(editor || project_manager)) {
+				if (!DisplayServer::get_singleton()->is_touchscreen_available()) {
+					//only if no touchscreen ui hint, set emulation
+					id->set_emulate_touch_from_mouse(true);
+				}
+			}
 
-			//id->set_emulate_mouse_from_touch(bool(GLOBAL_DEF_BASIC("input_devices/pointing/emulate_mouse_from_touch", true)));
+			id->set_emulate_mouse_from_touch(bool(GLOBAL_DEF_BASIC("input_devices/pointing/emulate_mouse_from_touch", true)));
 		}
 
 		OS::get_singleton()->benchmark_end_measure("Startup", "Setup Window and Boot");
@@ -4110,7 +4110,8 @@ int Main::start() {
 			if (editor_embed_subwindows) {
 				sml->get_root()->set_embedding_subwindows(true);
 			}
-			restore_editor_window_layout = EditorSettings::get_singleton()->get_setting("interface/editor/editor_screen").operator int() == EditorSettings::InitialScreen::INITIAL_SCREEN_AUTO;
+			restore_editor_window_layout = EditorSettings::get_singleton()->get_setting(
+					"interface/editor/remember_window_size_and_position");
 		}
 #endif
 
@@ -4217,11 +4218,6 @@ int Main::start() {
 			ProjectManager *pmanager = memnew(ProjectManager);
 			ProgressDialog *progress_dialog = memnew(ProgressDialog);
 			pmanager->add_child(progress_dialog);
-
-			if (editor_pseudolocalization) {
-				translation_server->get_editor_domain()->set_pseudolocalization_enabled(true);
-			}
-
 			sml->get_root()->add_child(pmanager);
 			OS::get_singleton()->benchmark_end_measure("Startup", "Project Manager");
 		}
