@@ -1013,6 +1013,22 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 			}
 		}
 	}
+
+	Input *id = Input::get_singleton();
+	Variant ret_val;
+	_get("input_devices/pointing/emulate_touch_from_mouse", ret_val);
+	if (bool(ret_val) && id) {
+		if (!DisplayServer::get_singleton()->is_touchscreen_available()) {
+			//only if no touchscreen ui hint, set emulation
+			id->set_emulate_touch_from_mouse(true);
+		}
+	}
+	_initial_set("input_devices/pointing/emulate_touch_from_mouse", bool(ret_val));
+	_get("input_devices/pointing/emulate_mouse_from_touch", ret_val);
+	_initial_set("input_devices/pointing/emulate_mouse_from_touch", bool(ret_val));
+	id->set_emulate_mouse_from_touch(bool(ret_val));
+	/*_initial_set("input_devices/pointing/emulate_mouse_from_touch", true);
+	_initial_set("input_devices/pointing/emulate_touch_from_mouse", false);*/
 }
 
 void EditorSettings::_load_godot2_text_editor_theme() {

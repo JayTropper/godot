@@ -935,7 +935,7 @@
 		<method name="is_touchscreen_available" qualifiers="const">
 			<return type="bool" />
 			<description>
-				Returns [code]true[/code] if touch events are available (Android or iOS), the capability is detected on the Web platform or if [member ProjectSettings.input_devices/pointing/emulate_touch_from_mouse] is [code]true[/code].
+				Returns [code]true[/code] if touch events are available (Android or iOS), the capability is detected on the Web platform or if [member EditorSettings.input_devices/pointing/emulate_touch_from_mouse] is [code]true[/code].
 			</description>
 		</method>
 		<method name="is_window_transparency_available" qualifiers="const">
