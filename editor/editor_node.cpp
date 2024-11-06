@@ -645,6 +645,12 @@ void EditorNode::_notification(int p_what) {
 					EditorFileSystem::get_singleton()->scan();
 				}
 			}
+
+			if (reset_emulation_dialog->is_visible()) {
+				String time_left = String::num(int(reset_emulation_timer->get_time_left()));
+				reset_emulation_dialog->set_text(
+						TTR("Mouse emulation is deactivated. If this is expected, confirm this warning.\n\nOtherwise cancel it or wait " + time_left + " seconds for an automatic reset."));
+			}
 		} break;
 
 		case NOTIFICATION_ENTER_TREE: {
@@ -733,6 +739,12 @@ void EditorNode::_notification(int p_what) {
 			// Set up a theme context for the 2D preview viewport using the stored preview theme.
 			CanvasItemEditor::ThemePreviewMode theme_preview_mode = (CanvasItemEditor::ThemePreviewMode)(int)EditorSettings::get_singleton()->get_project_metadata("2d_editor", "theme_preview", CanvasItemEditor::THEME_PREVIEW_PROJECT);
 			update_preview_themes(theme_preview_mode);
+
+			bool emulate_mouse_from_touch = bool(ProjectSettings::get_singleton()->get("input_devices/pointing/emulate_mouse_from_touch"));
+			bool keep_emulate_setting = bool(ProjectSettings::get_singleton()->get("input_devices/pointing/keep_emulate_mouse_from_touch_false"));
+			if (!emulate_mouse_from_touch && !keep_emulate_setting && !DisplayServer::get_singleton()->is_touchscreen_available()) {
+				call_deferred("create_mouse_emulation_warning");
+			}
 
 			/* DO NOT LOAD SCENES HERE, WAIT FOR FILE SCANNING AND REIMPORT TO COMPLETE */
 		} break;
@@ -6605,6 +6617,8 @@ void EditorNode::_bind_methods() {
 
 	ClassDB::bind_method("stop_child_process", &EditorNode::stop_child_process);
 
+	ClassDB::bind_method("create_mouse_emulation_warning", &EditorNode::_create_mouse_emulation_warning);
+
 	ADD_SIGNAL(MethodInfo("request_help_search"));
 	ADD_SIGNAL(MethodInfo("script_add_function_request", PropertyInfo(Variant::OBJECT, "obj"), PropertyInfo(Variant::STRING, "function"), PropertyInfo(Variant::PACKED_STRING_ARRAY, "args")));
 	ADD_SIGNAL(MethodInfo("resource_saved", PropertyInfo(Variant::OBJECT, "obj")));
@@ -6697,6 +6711,36 @@ int EditorNode::execute_and_show_output(const String &p_title, const String &p_p
 	return eta.exitcode;
 }
 
+void EditorNode::_on_warn_user_to_connect_mouse() {
+	if (!DisplayServer::get_singleton()->is_touchscreen_available()) {
+		show_warning(
+				TTR("You have deactivated the touch emulation!\nIf you do not have a mouse connected to your touchscreen device, please revert these settings.\nWithout a mouse, you will be unable to use the engine after reloading the project."));
+	}
+}
+
+void EditorNode::_reset_emulate_mouse_from_touch() {
+	if (reset_emulation_timer->get_time_left() > 0) {
+		reset_emulation_timer->stop();
+	}
+	ProjectSettings::get_singleton()->set("input_devices/pointing/emulate_mouse_from_touch", true);
+	ProjectSettings::get_singleton()->save();
+	reset_emulation_dialog->hide();
+	restart_editor();
+}
+
+void EditorNode::_keep_emulate_mouse_from_touch() {
+	if (reset_emulation_timer->get_time_left() > 0) {
+		reset_emulation_timer->stop();
+	}
+	ProjectSettings::get_singleton()->set("input_devices/pointing/keep_emulate_mouse_from_touch_false", true);
+}
+
+void EditorNode::_create_mouse_emulation_warning() {
+	_close_save_scene_progress();
+	EditorInterface::get_singleton()->popup_dialog_centered(reset_emulation_dialog);
+	reset_emulation_timer->start();
+}
+
 EditorNode::EditorNode() {
 	DEV_ASSERT(!singleton);
 	singleton = this;
@@ -6746,6 +6790,8 @@ EditorNode::EditorNode() {
 	EditorUndoRedoManager::get_singleton()->connect("history_changed", callable_mp(this, &EditorNode::_update_undo_redo_allowed));
 	ProjectSettings::get_singleton()->connect("settings_changed", callable_mp(this, &EditorNode::_update_from_settings));
 	GDExtensionManager::get_singleton()->connect("extensions_reloaded", callable_mp(this, &EditorNode::_gdextensions_reloaded));
+
+	ProjectSettings::get_singleton()->connect("warn_user_to_connect_mouse", callable_mp(this, &EditorNode::_on_warn_user_to_connect_mouse));
 
 	TranslationServer::get_singleton()->set_enabled(false);
 	// Load settings.
@@ -7953,6 +7999,18 @@ EditorNode::EditorNode() {
 	add_child(system_theme_timer);
 	system_theme_timer->set_owner(get_owner());
 	system_theme_timer->set_autostart(true);
+
+	reset_emulation_dialog = memnew(ConfirmationDialog);
+	reset_emulation_dialog->set_text(
+			TTR("Mouse emulation is deactivated. If this is expected, confirm this warning.\n\nOtherwise cancel it or wait 10 seconds for an automatic reset."));
+	reset_emulation_dialog->connect(SceneStringName(confirmed), callable_mp(this, &EditorNode::_keep_emulate_mouse_from_touch));
+	reset_emulation_dialog->connect("canceled", callable_mp(this, &EditorNode::_reset_emulate_mouse_from_touch));
+
+	reset_emulation_timer = memnew(Timer);
+	reset_emulation_timer->set_wait_time(20.0);
+	reset_emulation_timer->connect("timeout", callable_mp(this, &EditorNode::_reset_emulate_mouse_from_touch));
+	reset_emulation_timer->set_owner(get_owner());
+	add_child(reset_emulation_timer);
 }
 
 EditorNode::~EditorNode() {

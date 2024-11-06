@@ -664,6 +664,13 @@ private:
 	void _progress_dialog_visibility_changed();
 	void _load_error_dialog_visibility_changed();
 
+	void _create_mouse_emulation_warning();
+	void _on_warn_user_to_connect_mouse();
+	Timer *reset_emulation_timer = nullptr;
+	void _reset_emulate_mouse_from_touch();
+	void _keep_emulate_mouse_from_touch();
+	ConfirmationDialog *reset_emulation_dialog = nullptr;
+
 protected:
 	friend class FileSystemDock;
 

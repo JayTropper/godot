@@ -316,6 +316,11 @@ bool ProjectSettings::_set(const StringName &p_name, const Variant &p_value) {
 				}
 			}
 		}
+		if (p_name.operator String().contains("input_devices/pointing/emulate_mouse_from_touch")) {
+			if (!bool(p_value)) {
+				emit_signal(SNAME("warn_user_to_connect_mouse"));
+			}
+		}
 
 		if (props.has(p_name)) {
 			props[p_name].variant = p_value;
@@ -1393,6 +1398,7 @@ void ProjectSettings::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("save_custom", "file"), &ProjectSettings::_save_custom_bnd);
 
 	ADD_SIGNAL(MethodInfo("settings_changed"));
+	ADD_SIGNAL(MethodInfo("warn_user_to_connect_mouse"));
 }
 
 void ProjectSettings::_add_builtin_input_map() {
@@ -1585,6 +1591,9 @@ ProjectSettings::ProjectSettings() {
 	GLOBAL_DEF_INTERNAL("internationalization/locale/translation_add_builtin_strings_to_pot", false);
 
 	ProjectSettings::get_singleton()->add_hidden_prefix("input/");
+
+	// If the user confirms to keep the mouse emulation deactivated, this is set to true and no warning will be displayed again
+	GLOBAL_DEF_INTERNAL("input_devices/pointing/keep_emulate_mouse_from_touch_false", false);
 }
 
 ProjectSettings::ProjectSettings(const String &p_path) {
